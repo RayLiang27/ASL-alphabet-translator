@@ -5,9 +5,6 @@ import numpy as np
 
 # hands landmark detecting
 mp_hands = mp.solutions.hands
-# utils for drawing landmark positions on image
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
 
 # initialize hands landmark detecting
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
@@ -48,5 +45,5 @@ for folder_i, folder in enumerate(data_folders):
 
 
 # Save the classified data into a file
-np.savez("../data/processed/dataset_small.npz", features=features, labels=labels) # for smaller dataset
-# np.savez("../data/processed/dataset_kaggle.npz", features=features, labels=labels) # for larger dataset
+np.savez_compressed("../data/processed/dataset_small.npz", features=features, labels=labels) # for smaller dataset
+# np.savez_compressed("../data/processed/dataset_kaggle.npz", features=features, labels=labels) # for larger dataset
