@@ -6,7 +6,7 @@
 
 import cv2 as cv
 
-IMG_PER_CLASS = 100
+IMG_PER_CLASS = 50
 
 # Set up webcam
 webcam = cv.VideoCapture(0)
@@ -28,7 +28,7 @@ while True:
 	if record_frames:
 		# Save frame into folder
 		print(f"{counter}")
-		cv.imwrite(f"data/raw/{folder}/{folder}{counter}.jpg", frame)
+		cv.imwrite(f"../data/raw/{folder}/{folder}{counter}.jpg", frame)
 		counter += 1
 
 	# Stop after IMG_PER_CLASS frames
