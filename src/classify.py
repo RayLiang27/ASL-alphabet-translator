@@ -80,5 +80,5 @@ if not has_missed:
 	print("\tNONE")
 
 # Save the classified data into a file
-np.savez_compressed("../data/processed/dataset_small.npz", features=features, labels=labels) # for smaller dataset
+np.savez_compressed("../data/processed/dataset_small.npz", features=features, labels=labels, label_map=data_folders) # for smaller dataset
 # np.savez_compressed("../data/processed/dataset_kaggle.npz", features=features, labels=labels) # for larger dataset
