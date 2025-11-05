@@ -58,8 +58,20 @@ while True:
 				landmark_coords.append(landmarks.landmark[i].y)
 			
 		if len(landmark_coords) > 0:
+			# Make guess
 			prediction = model.predict(X=[landmark_coords])
-			print(LABEL_MAP[prediction[0]])
+			# with probability weight
+			probabilities = model.predict_proba([landmark_coords])
+
+			# print(LABEL_MAP[prediction[0]])
+			# print(probabilities[0])
+			# print()
+
+			# Only label guesses with >0.7 probability
+			if (probabilities[0][prediction[0]] > 0.7):
+				print(LABEL_MAP[prediction[0]])
+			else:
+				print("NONE")
 
 	cv.imshow("Webcam", frame)
 	if cv.waitKey(40) & 0xFF == 27: # ESC key to exit
