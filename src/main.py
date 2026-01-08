@@ -9,12 +9,12 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
 # initialize hands landmark detecting
-hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
+hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)
 
 model = None
 
 # Load the model
-with open("../models/rand_forest_small.pkl", "rb") as f:
+with open("./models/rand_forest_small.pkl", "rb") as f:
     model = pickle.load(f)
 
 # Hard code in the label map
@@ -56,7 +56,8 @@ while True:
 			for i in range(len(landmarks.landmark)):
 				landmark_coords.append(landmarks.landmark[i].x)
 				landmark_coords.append(landmarks.landmark[i].y)
-			
+		print(f"LANDMARKS: {landmarks.landmark}")
+		print(f"LANDMARK_COORDS: {landmark_coords}")
 		if len(landmark_coords) > 0:
 			# Make guess
 			prediction = model.predict(X=[landmark_coords])
@@ -68,10 +69,10 @@ while True:
 			# print()
 
 			# Only label guesses with >0.7 probability
-			if (probabilities[0][prediction[0]] > 0.7):
-				print(LABEL_MAP[prediction[0]])
-			else:
-				print("NONE")
+			# if (probabilities[0][prediction[0]] > 0.7):
+			print(LABEL_MAP[prediction[0]], probabilities[0][prediction[0]])
+			# else:
+				# print("NONE")
 
 	cv.imshow("Webcam", frame)
 	if cv.waitKey(40) & 0xFF == 27: # ESC key to exit
