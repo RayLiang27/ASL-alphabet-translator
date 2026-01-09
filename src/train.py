@@ -1,42 +1,86 @@
-# Libs
-import cv2 as cv
-import mediapipe as mp
-import numpy as np
-import pickle
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 
-# Scikit-learn
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras import callbacks
 
-raw_data_dir = "../data/raw/" # For the small self-recorded dataset from generate_data.py
-# raw_data_dir = "../data/kaggle/" # For the eventual larger data set from Kaggle
+import matplotlib.pyplot as plt
+# Set Matplotlib defaults
+plt.rc('figure', autolayout=True)
+plt.rc('axes', labelweight='bold', labelsize='large',
+       titleweight='bold', titlesize=18, titlepad=10)
+plt.rc('animation', html='html5')
+
+# Setup train and valid sets
+train = pd.read_csv("/kaggle/input/asl-dataset-landmarked/train_landmarks.csv")
+valid = pd.read_csv("/kaggle/input/asl-dataset-landmarked/valid_landmarks.csv")
+
+X_train = train.copy()
+X_valid = valid.copy()
+y_train = X_train.pop("label")
+y_valid = X_valid.pop("label")
+
+# No preprocessing, the data inside the csv does not contain any empty values or values outside of [0, 1)
+
+print(X_train.shape)
+print(y_train.shape)
+print(X_valid.shape)
+print(y_valid.shape)
+
+input_shape = [X_train.shape[1]]
+
+# Debugging
+print(y_train.shape, y_train.dtype)
+print(y_valid.shape, y_valid.dtype)
+
+print("Unique train labels:", np.unique(y_train)[:27])
+print("Min label:", y_train.min(), "Max label:", y_train.max())
+
+print(X_train.shape, y_train.shape)
+print(X_valid.shape, y_valid.shape)
 
 
-loaded = np.load("../data/processed/dataset_small.npz")
-# loaded = np.load("../data/processed/dataset_kaggle.npz")
-features = loaded["features"]
-labels = loaded["labels"]
+# =========================
+# TRAINING
+# =========================
 
-print("TRAINING START")
+early_stop = callbacks.EarlyStopping(
+    monitor="val_loss",
+    patience=5,
+    min_delta=1e-4,
+    restore_best_weights=True
+)
 
-# Test will be done on 2 of the 50 images for each class
-X_train, X_test, Y_train, Y_true = train_test_split(features, labels, test_size=0.04, shuffle=True, stratify=labels)
+model = keras.Sequential([
+    layers.Input(shape=(42,)),
+    layers.Dense(256, activation='relu'),
+    layers.Dense(128, activation='relu'),
+    # layers.Dropout(0.1),
+    layers.Dense(64, activation='relu'),
+    # layers.Dropout(0.1),
+    layers.Dense(27, activation="softmax"),
+])
 
-# Define model
-model = RandomForestClassifier()
-model.fit(X_train, Y_train)
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=["accuracy"]
+)
 
-prediction = model.predict(X=X_test)
+history = model.fit(
+    X_train, y_train,
+    validation_data=(X_valid, y_valid),
+    batch_size=512,
+    epochs=150,
+    callbacks=[early_stop],
+)
 
-# Get a quick accuracy score of the model
-result = accuracy_score(y_pred=prediction, y_true=Y_true)
+# View training graph
 
-print("DONE")
+history_df = pd.DataFrame(history.history)
+history_df.loc[5:, ['loss', 'val_loss']].plot()
+print("Minimum Validation Loss: {:0.4f}".format(history_df['val_loss'].min()))
 
-# We should expect 100 as the small database set are all so similar
-print(f"Score: {result}")
-
-# Save model with pickle
-with open("../models/rand_forest_small.pkl", "wb") as f:
-    pickle.dump(model, f)
+# Save model (done on kaggle)
+model.save("/kaggle/working/asl_landmark_model.keras")

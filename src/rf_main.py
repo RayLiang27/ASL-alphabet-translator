@@ -1,6 +1,6 @@
 import cv2 as cv
 import mediapipe as mp
-from tensorflow import keras
+import pickle
 
 # hands landmark detecting
 mp_hands = mp.solutions.hands
@@ -11,7 +11,11 @@ mp_drawing_styles = mp.solutions.drawing_styles
 # initialize hands landmark detecting
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)
 
-model = keras.models.load_model("asl_landmark_model.keras")
+model = None
+
+# Load the model
+with open("./models/rand_forest_small.pkl", "rb") as f:
+    model = pickle.load(f)
 
 # Hard code in the label map
 LABEL_MAP = [
