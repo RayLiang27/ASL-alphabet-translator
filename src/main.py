@@ -1,4 +1,5 @@
-import cv2 as cv
+import cv2 as cv2
+import numpy as np
 import mediapipe as mp
 from tensorflow import keras
 
@@ -11,17 +12,17 @@ mp_drawing_styles = mp.solutions.drawing_styles
 # initialize hands landmark detecting
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)
 
-model = keras.models.load_model("asl_landmark_model.keras")
+model = keras.models.load_model("./models/asl_landmark_model.keras")
 
 # Hard code in the label map
 LABEL_MAP = [
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", 
     "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-    "U", "V", "W", "X", "Y", "Z"
+    "U", "V", "W", "X", "Y", "Z", "SPACE"
 ] 
 
 # Open webcam
-webcam = cv.VideoCapture(0)
+webcam = cv2.VideoCapture(0)
 
 print("main - Webcam started")
 
@@ -30,11 +31,9 @@ while True:
     ret, frame = webcam.read()
 
     # Mediapipe requires RGB, convert to such
-    frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     results = hands.process(frame_rgb)
-
-    landmark_coords = []
 
     if results.multi_hand_landmarks:
         for landmarks in results.multi_hand_landmarks:
@@ -46,34 +45,33 @@ while True:
                 mp_drawing_styles.get_default_hand_connections_style()
             )
 
+            row = [[]]
+
             # Check for full set of landmarks before adding to feature
             if len(landmarks.landmark) < 21:
                 continue
             for i, lm in enumerate(landmarks.landmark):
-                row[f"x{i}"] = lm.x
-                row[f"y{i}"] = lm.y
-        print(f"LANDMARKS: {landmarks.landmark}")
-        print(f"LANDMARK_COORDS: {landmark_coords}")
-        if len(landmark_coords) > 0:
-            # Make guess
-            prediction = model.predict(X=[landmark_coords])
-            # with probability weight
-            probabilities = model.predict_proba([landmark_coords])
+                row[0].append(lm.x)
+                row[0].append(lm.y)
 
-            # print(LABEL_MAP[prediction[0]])
-            # print(probabilities[0])
-            # print()
+        npy_row = np.array(row)
+
+        if len(row) > 0:
+            guess = model.predict(npy_row, verbose=0)
+            # Make guess
+            prediction = np.argmax(guess)
+            probability = np.max(guess)
 
             # Only label guesses with >0.7 probability
-            # if (probabilities[0][prediction[0]] > 0.7):
-            print(LABEL_MAP[prediction[0]], probabilities[0][prediction[0]])
-            # else:
-                # print("NONE")
+            if (probability > 0.7):
+                print(LABEL_MAP[prediction], probability)
+            else:
+                print("NONE")
 
-    cv.imshow("Webcam", frame)
-    if cv.waitKey(40) & 0xFF == 27: # ESC key to exit
+    cv2.imshow("Webcam", frame)
+    if cv2.waitKey(40) & 0xFF == 27: # ESC key to exit
         break
 
 
 webcam.release()
-cv.destroyAllWindows()
+cv2.destroyAllWindows()
