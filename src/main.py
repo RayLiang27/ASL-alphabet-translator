@@ -1,3 +1,4 @@
+import os
 import cv2 as cv2
 import numpy as np
 import mediapipe as mp
@@ -12,6 +13,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 # initialize hands landmark detecting
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)
 
+# Load model
 model = keras.models.load_model("./models/asl_landmark_model.keras")
 
 # Hard code in the label map
@@ -22,8 +24,7 @@ LABEL_MAP = [
 ] 
 
 # Open webcam
-webcam = cv2.VideoCapture(0)
-
+webcam = cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) if os.name == 'nt' else cv2.VideoCapture(0)
 print("main - Webcam started")
 
 # frame by frame
