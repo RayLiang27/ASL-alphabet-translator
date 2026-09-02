@@ -41,7 +41,8 @@ letter_time = defaultdict(float)
 last_letter = None
 last_time = time.time()
 
-letter_duration = 2.5   # time taken to be counted as a full letter
+letter_duration = 2.5   # time in between letters
+letter_grace_duration = 1.5 # time for person to switch to next letter
 was_last_none = False    # was the last letter none (2 nones in a row = clear list)
 
 # frame by frame
@@ -55,6 +56,7 @@ while True:
     results = hands.process(frame_rgb)
     new_letter = "NONE"
 
+    # Run thru model
     if results.multi_hand_landmarks:
         for landmarks in results.multi_hand_landmarks:
             mp_drawing.draw_landmarks(
@@ -79,8 +81,6 @@ while True:
                 row_x.append(lm.x)
                 row_y.append(lm.y)
             
-            # draw bbox around hand + prediction
-            # cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 3)
 
         npy_row = np.array(row)
 
@@ -98,8 +98,31 @@ while True:
                 print("NONE")
                 new_letter = "NONE"
 
-    if last_letter is not None:
-        letter_time[last_letter] += now - last_time
+            # get frame dimensions to convert normalized coords -> pixel coords
+            h, w, _ = frame.shape
+
+            x_min = int(min(row_x) * w)
+            x_max = int(max(row_x) * w)
+            y_min = int(min(row_y) * h)
+            y_max = int(max(row_y) * h)
+
+            # optional: add a little padding around the hand
+            padding = 20
+            x_min = max(0, x_min - padding)
+            y_min = max(0, y_min - padding)
+            x_max = min(w, x_max + padding)
+            y_max = min(h, y_max + padding)
+
+            # draw bbox around hand + prediction
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 0), 3)
+            cv2.putText(frame, new_letter, (x_min, y_min - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
+
+    if (now - start_time >= letter_grace_duration):
+        if last_letter is None:
+            letter_time["NONE"] += now - last_time
+        else:
+            letter_time[last_letter] += now - last_time
 
     last_letter = new_letter
     last_time = now
@@ -129,6 +152,8 @@ while True:
         # Reset counters
         letter_time.clear()
         start_time = now
+        
+        # Write it onto the screen
 
 
 
