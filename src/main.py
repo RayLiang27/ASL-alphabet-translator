@@ -56,7 +56,7 @@ while True:
     results = hands.process(frame_rgb)
     new_letter = "NONE"
 
-    # Run thru model
+    ### Run thru model
     if results.multi_hand_landmarks:
         for landmarks in results.multi_hand_landmarks:
             mp_drawing.draw_landmarks(
@@ -90,8 +90,8 @@ while True:
             prediction = np.argmax(guess)
             probability = np.max(guess)
 
-            # Only label guesses with >0.7 probability
-            if (probability > 0.7):
+            # Only label guesses with great enough certainty
+            if (probability > 0.65):
                 print(LABEL_MAP[prediction], probability)
                 new_letter = LABEL_MAP[prediction]
             else:
@@ -115,9 +115,10 @@ while True:
 
             # draw bbox around hand + prediction
             cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 0), 3)
-            cv2.putText(frame, new_letter, (x_min, y_min - 10),
+            cv2.putText(frame, new_letter   , (x_min, y_min - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
 
+    ### Determine most likely letter desired by user
     if (now - start_time >= letter_grace_duration):
         if last_letter is None:
             letter_time["NONE"] += now - last_time
@@ -153,8 +154,45 @@ while True:
         letter_time.clear()
         start_time = now
         
-        # Write it onto the screen
+    ### Write text list onto the screen
+    text = "".join(letter_list)
 
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1.1
+    thickness = 3
+    margin = 15  # left/right padding
+    h, w, _ = frame.shape
+    max_width = w - 2 * margin
+
+    # Trim from the left (oldest letters) until the text fits on screen
+    display_text = text
+    (text_w, text_h), _ = cv2.getTextSize(display_text, font, font_scale, thickness)
+    while text_w > max_width and len(display_text) > 0:
+        display_text = display_text[1:]
+        (text_w, text_h), _ = cv2.getTextSize(display_text, font, font_scale, thickness)
+
+    text_x = margin
+    text_y = h - 30  # near bottom of frame
+    box_top = text_y - text_h - 15
+
+    # Background box behind text for readability
+    cv2.rectangle(frame, (0, box_top), (w, h), (0, 0, 0), -1)
+
+    ### Indicator for when each letter will tick over
+    progress = min((now - start_time) / letter_duration, 1.0)
+    circle_radius = 10
+    circle_center = (margin + circle_radius, box_top - circle_radius - 10)
+
+    # Background ring (empty state)
+    cv2.circle(frame, circle_center, circle_radius, (80, 80, 80), 2)
+
+    # Filled pie slice growing clockwise from the top as time elapses
+    end_angle = 360 * progress
+    cv2.ellipse(frame, circle_center, (circle_radius, circle_radius),
+                -90, 0, end_angle, (0, 255, 0), -1)
+
+    cv2.putText(frame, display_text, (text_x, text_y),
+                font, font_scale, (0, 255, 0), thickness)
 
 
     cv2.imshow("Webcam", frame)
